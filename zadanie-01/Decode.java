@@ -21,6 +21,7 @@ public class Decode extends DecoderInterface {
 	}
 
 	public void reset() {
+		this.builder = new StringBuilder();
 		this.width = 0;
 		this.recived = 0;
 	}

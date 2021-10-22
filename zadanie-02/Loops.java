@@ -3,8 +3,8 @@ import java.util.LinkedList;
 
 public class Loops implements GeneralLoops {
 	
-	private List<Integer> lowerLimits = null;
-	private List<Integer> upperLimits = null;
+	private List<Integer> lowerLimits = new LinkedList<Integer>();
+	private List<Integer> upperLimits = new LinkedList<Integer>();
 
 	private void loop(int index, List<Integer> acc, List<List<Integer>> result) {
 		if(index == lowerLimits.size() || index == upperLimits.size()) {

@@ -15,8 +15,8 @@ public class Test {
 		upper.add(2);
 		upper.add(2);
 
-		// loops.setLowerLimits(lower);
-		// loops.setUpperLimits(upper);
+		loops.setLowerLimits(lower);
+		loops.setUpperLimits(upper);
 
 		List<List<Integer>> result = loops.getResult();
 

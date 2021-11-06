@@ -25,17 +25,23 @@ public class Decrypter implements DecrypterInterface {
 
 		String wfais = "Wydział Fizyki, Astronomii i Informatyki Stosowanej".replaceAll("\\s+|,", "");
 		Pattern p = Pattern.compile("(\\s|^)(\\S{7})\\s+(\\S{6}),\\s+(\\S{10})\\s+(\\S{1})\\s+(\\S{11})\\s+(\\S{10})(\\s|$)");
-
         Matcher matcher = p.matcher(encryptedDocument);
 		
-		if (!matcher.find()) 
-			return;
+		outer: while (matcher.find()) {
+			String matched = matcher.group().replaceAll("\\s+|,", "");
+			for (Integer i = 0; i < wfais.length(); i++) {
+				Character a = wfais.charAt(i);
+				Character b = matched.charAt(i);
+				if ((codeMap.containsKey(a) && !codeMap.get(a).equals(b)) || (decodeMap.containsKey(b) && !decodeMap.get(b).equals(a))) {
+					reset();
+					continue outer;
+				}
+				codeMap.put(a, b);
+				decodeMap.put(b, a);
+			}
 
-		String matched = matcher.group().replaceAll("\\s+|,", "");
-
-		for (Integer i = 0; i < wfais.length(); i++) {
-			codeMap.put(wfais.charAt(i), matched.charAt(i));
-			decodeMap.put(matched.charAt(i), wfais.charAt(i));
+			// at this point, valid patter has been found
+			break;
 		}
 	}
 

@@ -1,5 +1,7 @@
 import java.util.HashMap;
 import java.util.Map;
+import java.util.List;
+import java.util.ArrayList;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -10,6 +12,17 @@ public class Decrypter implements DecrypterInterface {
 	private void reset() {
 		codeMap = new HashMap<Character, Character>();
 		decodeMap = new HashMap<Character, Character>();
+	}
+
+	private List<Integer> signature(String str) {
+		List<Integer> sig = new ArrayList<Integer>();
+		List<Character> set = new ArrayList<Character>();
+		for (Character c : str.toCharArray()) {
+			if (!set.contains(c)) set.add(c);
+			sig.add(set.indexOf(c));
+		}
+
+		return sig;
 	}
 
 	public Decrypter() {
@@ -24,22 +37,20 @@ public class Decrypter implements DecrypterInterface {
 			return;
 
 		String wfais = "Wydział Fizyki, Astronomii i Informatyki Stosowanej".replaceAll("\\s+|,", "");
-		Pattern p = Pattern.compile("(\\s|^)(\\S{7})\\s+(\\S{6}),\\s+(\\S{10})\\s+(\\S{1})\\s+(\\S{11})\\s+(\\S{10})(\\s|$)");
+		Pattern p = Pattern.compile("(\\b|\\s|^)([^\\s,]{7})\\s+([^\\s,]{6}),\\s+([^\\s,]{10})\\s+([^\\s,]{1})\\s+([^\\s,]{11})\\s+([^\\s,]{10})(\\b|\\s|$)");
         Matcher matcher = p.matcher(encryptedDocument);
 		
 		outer: while (matcher.find()) {
 			String matched = matcher.group().replaceAll("\\s+|,", "");
+
+			if (!signature(wfais).equals(signature(matched))) continue;
+
 			for (Integer i = 0; i < wfais.length(); i++) {
 				Character a = wfais.charAt(i);
 				Character b = matched.charAt(i);
-				if ((codeMap.containsKey(a) && !codeMap.get(a).equals(b)) || (decodeMap.containsKey(b) && !decodeMap.get(b).equals(a))) {
-					reset();
-					continue outer;
-				}
 				codeMap.put(a, b);
 				decodeMap.put(b, a);
 			}
-
 			// at this point, valid patter has been found
 			break;
 		}

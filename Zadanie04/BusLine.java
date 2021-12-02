@@ -4,6 +4,7 @@ import java.util.Set;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.stream.Collectors;
 
 enum Direction {
 	NONE,
@@ -55,16 +56,35 @@ class PosDir implements Position {
 		return x == other.x && y == other.y && dir == other.dir;
 	}
 
+	@Override
+	public int hashCode() {
+		return x.hashCode() * y.hashCode() * dir.hashCode();
+	}
+
 	Position2D toPos2D() {
 		return new Position2D(x, y);
 	}
 
+	PosDir toOrthogonal() {
+		Direction newDir;
+		switch (dir) {
+			case N_S: newDir = Direction.W_E; break;
+			case W_E: newDir = Direction.N_S; break;
+			case NE_SW: newDir = Direction.NW_SE; break;
+			case NW_SE: newDir = Direction.NE_SW; break;
+			default: newDir = Direction.NONE; break;
+		}
+
+		return new PosDir(x, y, newDir);
+	}
+
 	static boolean orthogonal(PosDir a, PosDir b) {
-		if (a.getDir() == Direction.N_S && b.getDir() == Direction.W_E) return true;
-		if (a.getDir() == Direction.W_E && b.getDir() == Direction.N_S) return true;
-		if (a.getDir() == Direction.NE_SW && b.getDir() == Direction.NW_SE) return true;
-		if (a.getDir() == Direction.NW_SE && b.getDir() == Direction.NE_SW) return true;
-		return false;
+		// if (a.getDir() == Direction.N_S && b.getDir() == Direction.W_E) return true;
+		// if (a.getDir() == Direction.W_E && b.getDir() == Direction.N_S) return true;
+		// if (a.getDir() == Direction.NE_SW && b.getDir() == Direction.NW_SE) return true;
+		// if (a.getDir() == Direction.NW_SE && b.getDir() == Direction.NE_SW) return true;
+		// return false;
+		return a.toOrthogonal().equals(b);
 	}
 }
 
@@ -131,9 +151,9 @@ class Line {
 		}
 		points.add(lastPoint);
 
-		for (Position p : points) {
-			System.out.println(p);
-		}
+		// for (Position p : points) {
+		// 	System.out.println(p);
+		// }
 	}
 
 	@Override
@@ -164,7 +184,11 @@ class LinePair implements BusLineInterface.LinesPair {
 
 public class BusLine implements BusLineInterface {
 	public Map<String, Line> lines = new HashMap<String, Line>();
-	public Map<LinesPair, Position> intersections = null;
+
+	public Map<String, List<Position>> linesPositions;
+	public Map<BusLineInterface.LinesPair, Set<Position>> intersectionOfLinesPair;
+	public Map<String, List<Position>> intersectionPositions;
+	public Map<String, List<String>> intersectionsWithLines;
 
 	@Override
 	public void addBusLine(String busLineName, Position firstPoint, Position lastPoint) {
@@ -179,56 +203,71 @@ public class BusLine implements BusLineInterface {
 
 	@Override
 	public void findIntersections() {
+		// Interpoluj punkty przez które przebiega trasa
+		lines
+			.values()
+			.forEach(l -> l.genPoints());
+
 		// Utwórz mapę wszystkich punktów z listami tras które przez nie przechodzą
-		// HashMap<Position, List<Line>> allPoints = new HashMap<Position, List<Line>>();
-		for (Line l : lines.values()) {
-			l.genPoints();
+		HashMap<Position, Line> allPoints = new HashMap<Position, Line>();
+		lines
+			.values()
+			.forEach(l -> l.points.forEach(p -> {
+				allPoints.put(p, l);
+			}));
 
-			// for (Position p : l.points) {
-			// 	if (!allPoints.containsKey(p))
-			// 		allPoints.put(p, new ArrayList<Line>());
+		// Utwórz mapę wszystkich linii z listami punktów przez które przechodzą
+		linesPositions = new HashMap<String, List<Position>>();
+		lines
+			.values()
+			.forEach(l -> linesPositions.put(
+				l.name,
+				// l.points.stream().
+				l.points.stream().collect(Collectors.toList())
+			));
+
+		// Utwórz mapę lini z listami kolenjuch przcięć z innymi liniami
+		intersectionsWithLines = new HashMap<String, List<String>>();
+		intersectionPositions = new HashMap<String, List<Position>>();
+		lines
+			.values()
+			.forEach(l -> {
+				intersectionsWithLines.put(l.name, new ArrayList<String>());
+				intersectionPositions.put(l.name, new ArrayList<Position>());
+
+				l.points.forEach(p -> {
+					Line crossing = allPoints.get(p.toOrthogonal());
+
+					if (crossing != null && p.getDir() != Direction.NONE) {
+						intersectionsWithLines.get(l.name).add(crossing.name);
+						intersectionPositions.get(l.name).add(p);
+					}
+				});
+			});
+
+		// intersectionsWithLines = lines
+		// .values()
+		// .stream()
+		// .collect(Collectors.toMap(l -> l.name, l -> {
+		// 	List<String> list = new ArrayList<String>();
+			
+		// 	l.points.forEach(p -> {
+		// 		if (p.getDir() == Direction.NONE)
+		// 			return;
 				
-			// 	allPoints.get(p).add(l);
-			// }
-		}
+		// 		Line crossing = allPoints.get(p.toOrthogonal());
+				
+		// 		if (crossing != null)
+		// 			list.add(crossing.name);
+		// 	});
 
-		// interface direction { public Integer direction(Line l, Position p);	}
-		// direction d = (Line l, Position p) -> {
-		// 	Integer x = p.getCol();
-		// 	Integer y = p.getRow();
-			
-		// 	Position posN = new Position2D(x, y-1);
-		// 	Position posS = new Position2D(x, y+1);
-		// 	Position posW = new Position2D(x-1, y);
-		// 	Position posE = new Position2D(x+1, y);
-		// 	Position posNW = new Position2D(x-1, y-1);
-		// 	Position posNE = new Position2D(x+1, y-1);
-		// 	Position posSW = new Position2D(x-1, y+1);
-		// 	Position posSE = new Position2D(x+1, y+1);
-		// 	Boolean hasN = allPoints.containsKey(posN) && allPoints.get(posN).contains(p);
-		// 	Boolean hasS = allPoints.containsKey(posS) && allPoints.get(posS).contains(p);
-		// 	Boolean hasW = allPoints.containsKey(posW) && allPoints.get(posW).contains(p);
-		// 	Boolean hasE = allPoints.containsKey(posE) && allPoints.get(posE).contains(p);
-		// 	Boolean hasNW = allPoints.containsKey(posNW) && allPoints.get(posNW).contains(p);
-		// 	Boolean hasNE = allPoints.containsKey(posNE) && allPoints.get(posNE).contains(p);
-		// 	Boolean hasSW = allPoints.containsKey(posSW) && allPoints.get(posSW).contains(p);
-		// 	Boolean hasSE = allPoints.containsKey(posSE) && allPoints.get(posSE).contains(p);
+		// 	return list;
+		// }));
 
-		// 	if 		( hasN && hasS ) return 1;
-		// 	else if ( has) 
+		System.out.println(intersectionsWithLines);
+		System.out.println(intersectionPositions);
 
-		// 	return null;
-		// };
-
-		// // Odrzuć punkty w których nie ma tras krzyżujących się pod kątem prostym 
-		// HashMap<Position, List<LinesPair>> intersectionPoints = new HashMap<Position, List<LinesPair>>();
-		// for (Position p : allPoints.keySet()) {
-		// 	if (allPoints.get(p).size() < 1) continue;
-		// 	// intersectionPoints.put(p, allPoints.get(p));
-			
-		// }
-
-		// intersectionPoints
+		// allPoints
 		// 	.entrySet()
 		// 	.stream()
 		// 	.forEach(e -> {
@@ -240,38 +279,26 @@ public class BusLine implements BusLineInterface {
 
 	@Override
 	public Map<BusLineInterface.LinesPair, Set<Position>> getIntersectionOfLinesPair() {
-		// TODO Auto-generated method stub
-		return null;
+		// if (intersectionOfLinesPair == null) findIntersections();
+		return intersectionOfLinesPair;
 	}
 
 	@Override
 	public Map<String, List<Position>> getIntersectionPositions() {
-		// TODO Auto-generated method stub
-		return null;
+		// if (intersectionPositions == null) findIntersections();
+		return intersectionPositions;
 	}
 
 	@Override
 	public Map<String, List<String>> getIntersectionsWithLines() {
-		// Map<String, List<String>> map = new HashMap<String, List<String>>();
-		// for (Line line : lines.values()) {
-		// 	for (Position p : line.points) {
-		// 		for (Line line : lines.values()) {
-		// 			if ()
-		// 		}
-		// 	}
-		// }
-
-		return null;
+		// if (intersectionsWithLines == null) findIntersections();
+		return intersectionsWithLines;
 	}
 
 	@Override
 	public Map<String, List<Position>> getLines() {
-		// Map<String, List<Position>> map = new HashMap<String, List<Position>>();
-		// for (Line line : lines.values())
-		// 	map.put(line.name, line.points);
-
-		// return map;
-		return null;
+		// if (linesPositions == null) findIntersections();
+		return linesPositions;
 	}
 
 }

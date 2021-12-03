@@ -151,34 +151,53 @@ class Line {
 		}
 		points.add(lastPoint);
 
-		// for (Position p : points) {
-		// 	System.out.println(p);
-		// }
 	}
 
 	@Override
 	public String toString() {
 		return name;
 	}
+
+	@Override
+	public int hashCode() {
+		return name.hashCode();
+	}
 }
 
 class LinePair implements BusLineInterface.LinesPair {
-	Line lineA;
-	Line lineB;
+	String firstLineName;
+	String secondLineName;
 
-	LinePair(Line a, Line b) {
-		lineA = a;
-		lineB = b;
+	LinePair(String a, String b) {
+		firstLineName = a;
+		secondLineName = b;
 	}
 
 	@Override
 	public String getFirstLineName() {
-		return lineA.name;
+		return firstLineName;
 	}
 
 	@Override
 	public String getSecondLineName() {
-		return lineB.name;
+		return secondLineName;
+	}
+
+	@Override
+	public int hashCode() {
+		return firstLineName.hashCode() * secondLineName.hashCode();
+	}
+
+	@Override
+	public boolean equals(Object obj) {
+		if (this == obj)
+			return true;
+		if (obj == null)
+			return false;
+		if (getClass() != obj.getClass())
+			return false;
+		LinePair other = (LinePair) obj;
+		return firstLineName.equals(other.firstLineName) && secondLineName.equals(other.secondLineName);
 	}
 }
 
@@ -226,53 +245,39 @@ public class BusLine implements BusLineInterface {
 				l.points.stream().collect(Collectors.toList())
 			));
 
-		// Utwórz mapę lini z listami kolenjuch przcięć z innymi liniami
+		// Utwórz mapę lini z listami nazw lini kolejnych skrzyrzyżowań
 		intersectionsWithLines = new HashMap<String, List<String>>();
+		
+		// Oraz mapę lini z listami punktów kolejnych skrzyrzyżowań
 		intersectionPositions = new HashMap<String, List<Position>>();
+		
+		// I mapę par lini które się krzyżują i pozycji tych skrzyżowań
+		intersectionOfLinesPair = new HashMap<BusLineInterface.LinesPair, Set<Position>>();
+
 		lines
 			.values()
-			.forEach(l -> {
-				intersectionsWithLines.put(l.name, new ArrayList<String>());
-				intersectionPositions.put(l.name, new ArrayList<Position>());
+			.forEach(line -> {
+				line.points.forEach(point -> {
+					Line other = allPoints.get(point.toOrthogonal());
+					if (other == null || point.getDir() == Direction.NONE) return;
+					LinePair pair = new LinePair(line.name, other.name);
+				
+					if(!intersectionsWithLines.containsKey(line.name))
+						intersectionsWithLines.put(line.name, new ArrayList<String>());
+						
+					intersectionsWithLines.get(line.name).add(other.name);
+					
+					if (!intersectionPositions.containsKey(line.name))
+						intersectionPositions.put(line.name, new ArrayList<Position>());
 
-				l.points.forEach(p -> {
-					Line crossing = allPoints.get(p.toOrthogonal());
-
-					if (crossing != null && p.getDir() != Direction.NONE) {
-						intersectionsWithLines.get(l.name).add(crossing.name);
-						intersectionPositions.get(l.name).add(p);
-					}
+					intersectionPositions.get(line.name).add(point);
+					
+					if (!intersectionOfLinesPair.containsKey(pair))
+						intersectionOfLinesPair.put(pair, new HashSet<Position>());
+						
+					intersectionOfLinesPair.get(pair).add(new Position2D(point.x, point.y));
 				});
 			});
-
-		// intersectionsWithLines = lines
-		// .values()
-		// .stream()
-		// .collect(Collectors.toMap(l -> l.name, l -> {
-		// 	List<String> list = new ArrayList<String>();
-			
-		// 	l.points.forEach(p -> {
-		// 		if (p.getDir() == Direction.NONE)
-		// 			return;
-				
-		// 		Line crossing = allPoints.get(p.toOrthogonal());
-				
-		// 		if (crossing != null)
-		// 			list.add(crossing.name);
-		// 	});
-
-		// 	return list;
-		// }));
-
-		System.out.println(intersectionsWithLines);
-		System.out.println(intersectionPositions);
-
-		// allPoints
-		// 	.entrySet()
-		// 	.stream()
-		// 	.forEach(e -> {
-		// 		System.out.println(e);
-		// 	});
 
 		// ¯\_(ツ)_/¯
 	}

@@ -52,11 +52,18 @@ public class Compression implements CompressionInterface {
 		}
 		else {
 			int keySize = (int) Math.ceil((Math.log(codeSize) / Math.log(2))) + 1;
-
-			int bodySize = heatList
+			int bodySize = 0;
+			
+			bodySize += heatList
 				.stream()
 				.skip(codeSize)
 				.map(e -> (int)(e.getValue() * (wordSize + 1)))
+				.reduce(0, Integer::sum);
+
+			bodySize += heatList
+				.stream()
+				.limit(codeSize)
+				.map(e -> (int)(e.getValue() * keySize))
 				.reduce(0, Integer::sum);
 			
 			int headerSize = codeSize * (keySize + wordSize);
@@ -85,13 +92,12 @@ public class Compression implements CompressionInterface {
 			String key = Integer.toBinaryString(i);
 			String word = heatList.get(i).getKey();
 			
-			while (key.length() < bestCodeParams.codeSize)
+			while (key.length() < bestCodeParams.keySize)
 				key = "0" + key;
 
 			decode.put(key, word);
 			encode.put(word, key);
 		}
-
 	}
 
 	public Map<String, String> getHeader() {

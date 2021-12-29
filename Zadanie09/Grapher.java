@@ -36,6 +36,10 @@ class Line {
 		b = _b;
 		width = _width;
 	}
+
+	double getWidth() {
+		return width;
+	}
 }
 
 class Canvas extends JPanel {
@@ -46,9 +50,14 @@ class Canvas extends JPanel {
 		setBackground(new Color(255, 255, 255));
 	}
 
+	interface Transform {
+		int calc(double p);
+	}
+
 	@Override
 	public void paintComponent(Graphics g) {
 		super.paintComponent(g);
+		Graphics2D g2 = (Graphics2D) g;
 
 		if (nodes == null || edges == null)
 			return;
@@ -57,16 +66,57 @@ class Canvas extends JPanel {
 		double maxX = nodes.stream().max(Comparator.comparing(Point::getX)).get().x;
 		double minY = nodes.stream().min(Comparator.comparing(Point::getY)).get().y;
 		double maxY = nodes.stream().max(Comparator.comparing(Point::getY)).get().y;
+		
+		double minW = edges.stream().min(Comparator.comparing(Line::getWidth)).get().width;
+		double maxW = edges.stream().max(Comparator.comparing(Line::getWidth)).get().width;
 
-		var bounds = g.getClipBounds();
-		int size = Math.max(bounds.height, bounds.y);
-		int margin = 50;
-		Point center = new Point(bounds.width / 2, bounds.height / 2);
+		var bounds = g2.getClipBounds();
+		int size = Math.min(bounds.width, bounds.height);
+		int margin = 100;
 
-		g.drawString(Double.toString(minX), 20, 60);
-		g.drawString(Double.toString(maxX), 20, 20);
-		g.drawString(Double.toString(minY), 20, 80);
-		g.drawString(Double.toString(maxY), 20, 40);
+		final Transform tX = (double x) -> {
+			double normalized = (x - minX) / (maxX - minX);
+			int xx = (int) (normalized * (size - margin));
+			return xx + ((bounds.width - size + margin) / 2);
+		};
+
+		final Transform tY = (double y) -> {
+			double normalized = (y - maxY) / (minY - maxY);
+			int yy = (int) (normalized * (size - margin));
+			return yy + ((bounds.height - size + margin) / 2);
+		};
+
+		edges.forEach(line -> {
+			double normalized = (line.width - minW) / (maxW - minW);
+			int width = (int)(normalized * 12) + 3;
+			g2.setStroke(new BasicStroke(width));
+			g2.setColor(Color.BLACK);
+			g2.drawLine(
+				tX.calc(line.a.x),
+				tY.calc(line.a.y),
+				tX.calc(line.b.x),
+				tY.calc(line.b.y)
+			);
+		});
+
+		nodes.forEach(point -> {
+			int r = 10;
+			g2.setStroke(new BasicStroke(3));
+			g2.setColor(Color.WHITE);
+			g2.fillOval(
+				tX.calc(point.x) - r,
+				tY.calc(point.y) - r,
+				2 * r,
+				2 * r
+			);
+			g2.setColor(Color.BLACK);
+			g2.drawOval(
+				tX.calc(point.x) - r,
+				tY.calc(point.y) - r,
+				2 * r,
+				2 * r
+			);
+		});
 	}
 }
 

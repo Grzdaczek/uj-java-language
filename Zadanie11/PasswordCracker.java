@@ -25,8 +25,6 @@ public class PasswordCracker implements PasswordCrackerInterface {
 
 	@Override
 	public String getPassword(String host, int port) {
-		// TODO Auto-generated method stub
-
 		try {
 			Socket socket = new Socket(host, port);
 			OutputStream os = socket.getOutputStream();

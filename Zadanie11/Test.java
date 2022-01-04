@@ -1,5 +1,3 @@
-import java.io.Console;
-
 public class Test {
 	public static void main(String[] args) {
 		PasswordCrackerInterface cracker = new PasswordCracker();

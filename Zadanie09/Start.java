@@ -197,7 +197,7 @@ class MainFrame {
 	}
 }
 
-public class Grapher {
+public class Start {
 	public static void main(String[] args) {
 		MainFrame mainFrame = new MainFrame();
 		mainFrame.show();
